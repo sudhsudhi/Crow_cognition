@@ -1,0 +1,15 @@
+#:kivy 1.10.0
+<Circly>:
+	canvas.before:
+        Color:
+            rgba: 1, 1, 1, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+	canvas:
+		Color:
+			rgb:1,0,0
+		Ellipse:
+			pos:self.center_x - (app.SIZ/2),self.center_y - (app.SIZ/2)
+			size:app.SIZ,app.SIZ	#egh
+		
