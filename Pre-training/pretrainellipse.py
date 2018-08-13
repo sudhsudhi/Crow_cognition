@@ -8,116 +8,226 @@ from kivy.graphics import Color, Ellipse,Line,Fbo,Rectangle
 from kivy.clock import Clock
 from kivy.properties import NumericProperty
 import serial,time
-import math
-#global ser
-#ser=serial.Serial('COM7',9600)
+import math,sys
+import winsound
+from openpyxl import Workbook
+import multiprocessing
+global ser
+ser=serial.Serial('COM1',9600)
 
-#ser.write('L')
-
-'''
-#Physical pixel
-const int ledPin = 13; // the pin that the LED is attached to
-int incomingByte;      // a variable to read incoming serial data into
-
-void setup() {
-  // initialize serial communication:
-  Serial.begin(9600);
-  // initialize the LED pin as an output:
-  pinMode(ledPin, OUTPUT);
-}
-
-void loop() {
-  // see if there's incoming serial data:
-  if (Serial.available() > 0) {
-    // read the oldest byte in the serial buffer:
-    incomingByte = Serial.read();
-    // if it's a capital H (ASCII 72), turn on the LED:
-    if (incomingByte == 'H') {
-      digitalWrite(ledPin, HIGH);
-    }
-    // if it's an L (ASCII 76) turn off the LED:
-    if (incomingByte == 'L') {
-      digitalWrite(ledPin, LOW);
-    }
-  }
-}
-
-'''
+# adjust 1. area , 2. time t , 3. port of serial 
 
 
-
-
-class Elly(Widget):
-    area =  40000
-    a_int=150 #width/2 (because int and numericproperty can't be multiplied)
-    a=NumericProperty(a_int)      #width/2
-    b= NumericProperty((area/(a_int*math.pi)))    #height/2    
-    #(size reference: a=100, b=127.32, area = pi.a.b = 40000)
-    def __init__(self, **kwargs):
-        super(Elly,self).__init__(**kwargs)
-        self.nextt='o'
-        
+class Shapy(Widget):
     
+
+    def __init__(self, **kwargs):
+        super(Shapy,self).__init__(**kwargs)
+
+        # CHANGING FOR DIFFERENT SHAPES: only the function inside_out and the starting part of update funcation has to be updated. 
+
+        '''the variables nextt is used to handle touch event in cases when the crow pecks within the circle. It is used so that 
+        even when the touch is within the circle when the circle has disappeared, the touch is ignored and the program doesn't hang.
+        It is also used as a time sometimes to make sure the time interval is maintained.
+        
+        nextt='start' initailly(by __init__), it becomes 'o' when the program starts( by update function), 
+        nextt != 'o' for 5 s ( or 't' seconds) after which the crow pecks within the shape. In this time nextt will become a datetime.datetime object and indicates the time(absolute time at which screen should reappear).
+
+
+        the variables blank, cleartime and num_trials are used to ensure that if the crow doesn't peck within the circle in the 30s,
+        the trial ends and blank screen appears for 5s.
+        blank = True for 5 s (or whatever will the time be set) after a 30s trial is over. All the other times it is False. It is a boolean.
+
+
+
+        cleartime is initially set by update function. It is resetted in two casees , if the crow succesfully touches or if 30 s ends.
+        s
+
+        blank also helps in ensuring that the touches received during 5s blank screen is ignored.
+
+        prgrm_start_time acts as a refernce also for excel sheet.
+
+        note that blank and nextt are independent variables and are infact for different purposes.
+
+        Only a touch received when next=='o' and blank == False will be checked for if it is within or outside the shape, because (if nextt != 'o' it means it is not even 5s after the last correct touch) or (if blank = True it means it is not even 5s after the last 30s trial ended) 
+        
+        
+        '''
+        self.nextt='start'              #update will make this variable "o" when the program starts
+        self.prgrm_start_time = 0       #update will make this variable the program_start_time
+        self.cleartime=datetime.timedelta(0,0,0,0)            #this will be set to prgrm_start_time+30 s by update, then increase by 35 seconds(30 s trial + 5 s blank)
+        self.blank=False            # This variable is True when the 5s blank screen is running, else it is False
+        self.num_trials =0          #the serial number of trials, increases if the crow pecks correctly or if 30s ends
+        
+        self.trial_t= 30 #number of seconds for which a trial should run(i.e no. of seconds for which a shape will be shown in a trial )
+        self.fail_t = 5 #number of seconds for which blank screen should be shown after a trial in which the crow didn't peck within the shape(i.e failed trial)
+        self.touched_t = 15 #number of seconds for which blank screen should be shown after the crow pecks within the shape
+        self.peck_no=0
+        
+
+   
+        
     
     
     def on_touch_down(self, touch):   #self refers to the widget, touch to the the tough motion event#on_touch_down is the function called by kivy when you touch. It's name is standard(not variable)
-          if  self.nextt =='o': 
-                print(touch)
-                                       
+          self.peck_no+=1
+          print "NEXTT: " + str(self.nextt)  
+          print "blank: " + str(self.blank) 
+          print " "
+
+          self.sheet.cell(row= self.peck_no+2, column=1).value = self.peck_no
+          
+          self.sheet.cell(row= self.peck_no+2,column=2).value = self.num_trials + 1
+          self.sheet.cell(row= self.peck_no+2,column=3).value = str(datetime.datetime.now()-self.prgrm_start_time)
+          
+          #self.sheet.cell(row= self.peck_no+2,column=5).value = str(touch)
+
+          if  self.nextt =='o' and not(self.blank):                      
                 xc=touch.x
                 yc=touch.y
-                xc1=((float(xc)-self.center_x)**2)/(self.a**2)
-                yc1=(float(yc)-self.center_y)**2/(self.b**2)
+                xc1=(float(xc)-self.center_x)**2
+                yc1=(float(yc)-self.center_y)**2
 
-                print "xc,yc,xcl,ycl"
-                # print xc,yc,xcl,ycl
-                if xc1 +yc1 <= 1:  
-                    print 'inside_circle'
+
+                if self.inside_out(touch):      
+
+                    print 'pecked_inside_circle'
+                    self.sheet.cell(row= self.peck_no+2,column=4).value = 'Inside'
+                    self.boo.save(self.file_name +'.xlsx')
+                    #--arduino part1  , part 2 in update function
+                    ser.write('O') #opens gate
+                    
+                    
                     current1=datetime.datetime.now()
-                    self.nextt=current1+datetime.timedelta(0,3,0,0)
+                    self.nextt=current1+datetime.timedelta(0,self.touched_t,0,0)
                                             #datetime.timedelta([days[, seconds[, microseconds[, milliseconds[, minutes[, hours[, weeks]]]]]]]
-
+                    self.cleartime = current1+datetime.timedelta(0,self.touched_t,0,0) + datetime.timedelta(0,self.trial_t,0,0)  # resetting cleartime after a succcessful peck by crow
                     with self.canvas.after:     #to add a screen to the  canvas, canvas.after appears above canvas
                             Color(1, 1, 1)
                             Rectangle(pos=self.pos, size=self.size)
+                    print 'yoyo'
+                    winsound.PlaySound('crow_caw.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)   #works only with wav file . winsound.SND_ASYNC makes sure sound is asynchronous with the program. That is program doesn't block till sound is fully played.
                 else:
-                    print 'nope'
-                
-                    
+                    print 'pecked_outside'
+                    self.sheet.cell(row= self.peck_no+2,column=4).value = 'Outside'
+                    self.boo.save(self.file_name +'.xlsx')
+          else :
+                self.sheet.cell(row= self.peck_no+2,column=2).value = "Blank"
+                self.sheet.cell(row= self.peck_no+2,column=4).value = 'Blank_Screen'
+                self.boo.save(self.file_name +'.xlsx')
+
+    def inside_out(self,tch):  
+        # also has to be changed for each shape
+        # returns True if inside shape and false if outside shape
+        #tch is the touch object 
+         
+
+         xc=tch.x
+         yc=tch.y
+         xc1=((float(xc)-self.center_x)**2)/(self.a**2)
+         yc1=(float(yc)-self.center_y)**2/(self.b**2)
+         if xc1 +yc1 <= 1:  
+            return True
+         else :
+            return False
+
                     
     def update(self,dt):        #just check why is it necesaary to add dt, it is not working without dt
+
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #Part-2 to be changed for each shape.
+
+        self.area =  40000
+        self.a=150     #width/2
+        self.b= self.area/(self.a*math.pi)
+
+        self.canvas.clear()
+        self.canvas.before.clear()
+
+        #self.canvas.before and self.canvas are called here because to avoid kv file. It is not called in init because before init is called, self.center_x,etc. are not defined.
+        # it is kept in update so that self.center can be updated every time and even when the tab is fullscreened there is no issue.(kv automatically updated it, but if self.canvas was called only once, it would not have been automatically updated.)
+
+        with self.canvas.before:         
+            Color(1,1,1)
+            Rectangle(pos=self.pos,size=self.size)
+        with self.canvas:
+            Color(1,0,0)
+            
+            Ellipse(pos=(self.center_x - self.a, self.center_y - self.b),size=(2*self.a,2*self.b))
+
+        #----------------------------------------------------------------------------------------------------------------------------------------------
+
+        if self.nextt=='start':
+                
+                self.file_name= raw_input("Enter the name of the excel sheet ( i.e name or date/time of experiment)")
+                self.nextt='o'
+                self.prgrm_start_time = datetime.datetime.now()
+                     #playing sound for the first trial
+                self.cleartime= self.prgrm_start_time + datetime.timedelta(0,self.trial_t,0,0)
+                
+                self.boo= Workbook()
+                self.sheet=self.boo.active
+                self.sheet.cell(row= 1,column=1).value = 'S.no. of pecks'
+                self.sheet.cell(row= 1,column=2).value = 'Trial no.'
+                self.sheet.cell(row= 1,column=3).value = 'Time'
+                self.sheet.cell(row= 1,column=4).value = 'Outside/Inside'
+                #self.sheet.cell(row= 1,column=5).value = 'Co-ordinates'
+                self.boo.save(self.file_name +'.xlsx')
+
+
+
+
+
+        if datetime.datetime.now().time() > self.cleartime.time() and not(self.blank) :# there is no need of not(self.blank), but it ensures this loop is not called more than once unnnecessarily
+                print ' '
+                print "5seconds_blank_screen starts," +str(self.num_trials+1) +"th trial finished"
+                print "prgrm_start_time: "+ str(self.prgrm_start_time)
+                print "cleartime: "+ str(self.cleartime)
+                print " "
+                with self.canvas.after:     #to add a screen to the  canvas, canvas.after appears above canvas
+                            Color(1, 1, 1)
+                            Rectangle(pos=self.pos, size=self.size)
+                self.blank=True
+
+        if self.blank :
+            sss= self.cleartime + datetime.timedelta(0,self.fail_t,0,0)
+            if datetime.datetime.now().time() > sss.time():  #5s blank time over 
+                print "5s_blank_screen_ends" +str(self.num_trials+2)+"th trial started"
+                print ' '
+                
+                self.canvas.after.clear()
+                
+                self.cleartime = self.cleartime + datetime.timedelta(0,self.fail_t+self.trial_t,0,0)  #resetting cleartime,clear time increase by 35s
+                self.blank=False
+                self.num_trials+=1  #keep this here only, as it ensures 5 s gap
+
         if self.nextt!='o':
             if datetime.datetime.now().time() > self.nextt.time():
                 self.canvas.after.clear()
+                
                 self.nextt='o'
+                #--arduino part2
+                ser.write('C') #closes gate
+                print str(self.num_trials+1) +"th trial finished"
+                print ' '
+                print "15s_blank_screen_ends, " +str(self.num_trials+2)+"th trial started"
+                print ' '
+                self.num_trials+=1 #keep this here only, as it door is closed only after that is the program stopped when num_trials=20
         
-        
-from kivy.lang import Builder
-kv_string= '''
-#:kivy 1.10.0
-<Elly>:
-    canvas.before:
-        Color:
-            rgba: 1, 1, 1 , 1
-        Rectangle:
-            pos: self.pos
-            size: self.size
-    canvas:
-        Color:
-            rgb:1,0,0
-        Ellipse:
-            pos:self.center_x - self.a,self.center_y - self.b
-            size:2*self.a,2*self.b
-'''
-#points: self.center_x, self.center_y + self.circum_radius , self.center_x - 0.866025*self.circum_radius , self.center_y -0.5*self.circum_radius  , self.center_x +0.866025*self.circum_radius , self.center_y -0.5*self.circum_radius
+        if self.num_trials == 20:
+            print "20 trials executed, program ending"
+            sys.exit()      #program ends
 
-Builder.load_string(kv_string)
+        
+
+from kivy.lang import Builder
+
     
 class PreTrainApp(App):
     def build(self):
-        el=Elly()
-        Clock.schedule_interval(el.update, 1.0 / 60.0)
-        return el
+        shape=Shapy()
+        Clock.schedule_interval(shape.update, 1.0 / 60.0)
+        return shape
     
 if __name__ == '__main__':
     PreTrainApp().run()

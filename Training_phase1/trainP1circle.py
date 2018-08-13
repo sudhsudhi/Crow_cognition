@@ -67,6 +67,7 @@ class Circly(Widget):
         self.center_ycordi=0 # this and the above varibales are updated by positioner function
         self.sound_list=[10,5,5] # for randomly producing 10 correct and 10 incorrect sounds.
     def positioner(self):   #randomly places the shape anywhere and plays the sound randomly based on sound_list
+        # no need to use this in update ,because position is anyhow random. Works fine in full screen too.
         
 
         self.center_xcordi=random.uniform(self.center_x-self.width/2 + self.radius ,self.center_x+self.width/2-self.radius) #uniform produces a random float

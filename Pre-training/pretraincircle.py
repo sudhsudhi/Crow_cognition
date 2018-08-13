@@ -18,12 +18,13 @@ ser=serial.Serial('COM1',9600)
 # adjust 1. area , 2. time t , 3. port of serial 
 
 
-class Circly(Widget):
-    area =  40000
-    radius= NumericProperty((area/math.pi)**0.5)
+class Shapy(Widget):
+    
 
     def __init__(self, **kwargs):
-        super(Circly,self).__init__(**kwargs)
+        super(Shapy,self).__init__(**kwargs)
+
+        # CHANGING FOR DIFFERENT SHAPES: only the function inside_out and the starting part of update funcation has to be updated. 
 
         '''the variables nextt is used to handle touch event in cases when the crow pecks within the circle. It is used so that 
         even when the touch is within the circle when the circle has disappeared, the touch is ignored and the program doesn't hang.
@@ -57,13 +58,15 @@ class Circly(Widget):
         self.cleartime=datetime.timedelta(0,0,0,0)            #this will be set to prgrm_start_time+30 s by update, then increase by 35 seconds(30 s trial + 5 s blank)
         self.blank=False            # This variable is True when the 5s blank screen is running, else it is False
         self.num_trials =0          #the serial number of trials, increases if the crow pecks correctly or if 30s ends
-        print 'RADIUS:' + str(self.radius)
+        
         self.trial_t= 30 #number of seconds for which a trial should run(i.e no. of seconds for which a shape will be shown in a trial )
         self.fail_t = 5 #number of seconds for which blank screen should be shown after a trial in which the crow didn't peck within the shape(i.e failed trial)
         self.touched_t = 15 #number of seconds for which blank screen should be shown after the crow pecks within the shape
         self.peck_no=0
-    
-    
+        
+
+   
+        
     
     
     def on_touch_down(self, touch):   #self refers to the widget, touch to the the tough motion event#on_touch_down is the function called by kivy when you touch. It's name is standard(not variable)
@@ -86,7 +89,7 @@ class Circly(Widget):
                 yc1=(float(yc)-self.center_y)**2
 
 
-                if xc1 +yc1 <= (self.radius)**2:      #make sure the size here is same as that in kv file
+                if self.inside_out(touch):      
 
                     print 'pecked_inside_circle'
                     self.sheet.cell(row= self.peck_no+2,column=4).value = 'Inside'
@@ -112,10 +115,47 @@ class Circly(Widget):
                 self.sheet.cell(row= self.peck_no+2,column=2).value = "Blank"
                 self.sheet.cell(row= self.peck_no+2,column=4).value = 'Blank_Screen'
                 self.boo.save(self.file_name +'.xlsx')
+
+    def inside_out(self,tch):  
+        # also has to be changed for each shape
+        # returns True if inside shape and false if outside shape
+        #tch is the touch object 
+         xc=tch.x
+         yc=tch.y
+         xc1=(float(xc)-self.center_x)**2
+         yc1=(float(yc)-self.center_y)**2
+         if xc1 +yc1 <= (self.radius)**2:
+            return True
+         else :
+            return False
+
                     
     def update(self,dt):        #just check why is it necesaary to add dt, it is not working without dt
+
+        #-----------------------------------------------------------------------------------------------------------------------------------------------
+        #Part-2 to be changed for each shape.
+
+        self.area =  40000
+        self.radius= ((self.area/math.pi)**0.5)
         
+        #self.canvas.before and self.canvas are called here because to avoid kv file. It is not called in init because before init is called, self.center_x,etc. are not defined.
+        # it is kept in update so that self.center can be updated every time and even when the tab is fullscreened there is no issue.(kv automatically updated it, but if self.canvas was called only once, it would not have been automatically updated.)
+
+        self.canvas.clear()
+        self.canvas.before.clear()
+
+        with self.canvas.before:         
+            Color(1,1,1)
+            Rectangle(pos=self.pos,size=self.size)
+        with self.canvas:
+            Color(1,0,0)
+            
+            Ellipse(pos=(self.center_x - self.radius, self.center_y - self.radius),size=(2*self.radius,2*self.radius))
+
+        #----------------------------------------------------------------------------------------------------------------------------------------------
+
         if self.nextt=='start':
+                
                 self.file_name= raw_input("Enter the name of the excel sheet ( i.e name or date/time of experiment)")
                 self.nextt='o'
                 self.prgrm_start_time = datetime.datetime.now()
@@ -178,31 +218,13 @@ class Circly(Widget):
         
 
 from kivy.lang import Builder
-kv_string= '''
-#:kivy 1.10.0
-<Circly>:
-	canvas.before:
-        Color:
-            rgba: 1, 1, 1 , 1
-        Rectangle:
-            pos: self.pos
-            size: self.size
-	canvas:        
-		Color:
-			rgb:1,0,0
-		Ellipse:
-            pos:self.center_x - self.radius,self.center_y - self.radius     #self refers to the widget, not to the canvas, because canvas is not a widget
-            size:2*self.radius,2*self.radius
-'''
-#points: self.center_x, self.center_y + self.circum_radius , self.center_x - 0.866025*self.circum_radius , self.center_y -0.5*self.circum_radius  , self.center_x +0.866025*self.circum_radius , self.center_y -0.5*self.circum_radius
 
-Builder.load_string(kv_string)
     
 class PreTrainApp(App):
     def build(self):
-        cir=Circly()
-        Clock.schedule_interval(cir.update, 1.0 / 60.0)
-        return cir
+        shape=Shapy()
+        Clock.schedule_interval(shape.update, 1.0 / 60.0)
+        return shape
     
 if __name__ == '__main__':
     PreTrainApp().run()
