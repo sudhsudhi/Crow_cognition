@@ -144,9 +144,10 @@ class Shapy(Widget):
         self.canvas.clear()
         self.canvas.before.clear()
 
-        with self.canvas.before:         
+        with self.canvas.before:     #self.canvas.before is updated every time to update when tab is resized.    
             Color(1,1,1)
             Rectangle(pos=self.pos,size=self.size)
+   
         with self.canvas:
             Color(1,0,0)
             

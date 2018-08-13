@@ -70,15 +70,16 @@ class Shapy(Widget):
     def positioner(self):   #randomly places the shape anywhere and plays the sound randomly based on sound_list
         # no need to use this in update ,because position is anyhow random. Works fine in full screen too.
         self.area =  40000                  #it is here just to initialize (there is no need of updating, but it's still here)
-        self.radius= (self.area/math.pi)**0.5
+        
+        self.circum_radius= ((4*(self.area))/(3*(3**0.5)))**0.5
 
-        self.center_xcordi=random.uniform(self.center_x-self.width/2 + self.radius ,self.center_x+self.width/2-self.radius) #uniform produces a random float
-        self.center_ycordi=random.uniform(self.center_y-self.height/2 + self.radius ,self.center_y+self.height/2 -self.radius)
+        self.center_xcordi=random.uniform(self.center_x-self.width/2 + self.circum_radius ,self.center_x+self.width/2-self.circum_radius) #uniform produces a random float
+        self.center_ycordi=random.uniform(self.center_y-self.height/2 + self.circum_radius ,self.center_y+self.height/2 -self.circum_radius)
 
         with self.canvas:     
             Color(1,0,0)
             
-            Ellipse(pos=(self.center_xcordi - self.radius, self.center_ycordi - self.radius),size=(2*self.radius,2*self.radius))
+            Triangle(points=(self.center_xcordi, self.center_ycordi + self.circum_radius , self.center_xcordi - 0.866025*self.circum_radius , self.center_ycordi -0.5*self.circum_radius  , self.center_xcordi +0.866025*self.circum_radius , self.center_ycordi -0.5*self.circum_radius,))
 
         k = random.randint(0,2) #gives 0/1/2
 
@@ -101,11 +102,21 @@ class Shapy(Widget):
         # also has to be changed for each shape
         # returns True if inside shape and false if outside shape
         #tch is the touch object 
-         xc=tch.x
-         yc=tch.y
-         xc1=(float(xc)-self.center_xcordi)**2
-         yc1=(float(yc)-self.center_ycordi)**2
-         if xc1 +yc1 <= (self.radius)**2:
+    
+
+         x=tch.x
+         y=tch.y
+
+         x1,y1,x2,y2,x3,y3 = self.center_xcordi,self.center_ycordi + self.circum_radius , self.center_xcordi - 0.866025*self.circum_radius , self.center_ycordi -0.5*self.circum_radius  , self.center_xcordi +0.866025*self.circum_radius , self.center_ycordi -0.5*self.circum_radius
+         #print x1,y1,x2,y2,x3,y3
+         #print 'x1,y1,x2,y2,x3,y3'
+         a=(x-x1)-((y-y1)*((x2-x1)/(y2-y1)))
+         a1=(x3-x1)-((y3-y1)*((x2-x1)/(y2-y1)))
+         b=(x-x1)-((y-y1)*((x3-x1)/(y3-y1)))
+         b1=(x2-x1)-((y2-y1)*((x3-x1)/(y3-y1)))
+         c=y-y3   #(y3=y2, the third lines equation is y=y3)
+         c1=y1-y3
+         if a*a1>=0 and b*b1>=0 and c*c1>=0:  
             return True
          else :
             return False

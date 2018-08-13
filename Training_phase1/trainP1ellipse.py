@@ -4,7 +4,7 @@ kivy.require('1.10.0') # replace with your current kivy version !
 from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
-from kivy.graphics import Color, Ellipse,Line,Fbo,Rectangle,Triangle
+from kivy.graphics import Color, Ellipse,Line,Fbo,Rectangle
 from kivy.clock import Clock
 from kivy.properties import NumericProperty
 import serial,time
@@ -70,15 +70,17 @@ class Shapy(Widget):
     def positioner(self):   #randomly places the shape anywhere and plays the sound randomly based on sound_list
         # no need to use this in update ,because position is anyhow random. Works fine in full screen too.
         self.area =  40000                  #it is here just to initialize (there is no need of updating, but it's still here)
-        self.radius= (self.area/math.pi)**0.5
+        
+        self.a=150     #width/2
+        self.b= self.area/(self.a*math.pi)
 
-        self.center_xcordi=random.uniform(self.center_x-self.width/2 + self.radius ,self.center_x+self.width/2-self.radius) #uniform produces a random float
-        self.center_ycordi=random.uniform(self.center_y-self.height/2 + self.radius ,self.center_y+self.height/2 -self.radius)
+        self.center_xcordi=random.uniform(self.center_x-self.width/2 + self.a ,self.center_x+self.width/2-self.a) #uniform produces a random float
+        self.center_ycordi=random.uniform(self.center_y-self.height/2 + self.b ,self.center_y+self.height/2 -self.b)
 
         with self.canvas:     
             Color(1,0,0)
             
-            Ellipse(pos=(self.center_xcordi - self.radius, self.center_ycordi - self.radius),size=(2*self.radius,2*self.radius))
+            Ellipse(pos=(self.center_xcordi - self.a, self.center_ycordi - self.b),size=(2*self.a,2*self.b)) 
 
         k = random.randint(0,2) #gives 0/1/2
 
@@ -101,11 +103,13 @@ class Shapy(Widget):
         # also has to be changed for each shape
         # returns True if inside shape and false if outside shape
         #tch is the touch object 
+         
+
          xc=tch.x
          yc=tch.y
-         xc1=(float(xc)-self.center_xcordi)**2
-         yc1=(float(yc)-self.center_ycordi)**2
-         if xc1 +yc1 <= (self.radius)**2:
+         xc1=((float(xc)-self.center_xcordi)**2)/(self.a**2)
+         yc1=(float(yc)-self.center_ycordi)**2/(self.b**2)
+         if xc1 +yc1 <= 1:  
             return True
          else :
             return False
