@@ -147,7 +147,8 @@ class Shapy(Widget):
                     self.sheet.cell(row= self.peck_no+2,column=5).value = str(tro)
                     self.boo.save(self.file_name +'.xlsx')
                     #--arduino part1  , part 2 in update function
-                    ser.write('O') #opens gate
+                    if self.ki==0:
+                        ser.write('O') #opens gate
                     
                     
                     current1=datetime.datetime.now()
@@ -219,11 +220,13 @@ class Shapy(Widget):
         if self.nextt!='o':
             if datetime.datetime.now().time() > self.nextt.time():
                 
-                self.positioner()
                 
                 self.nextt='o'
                 #--arduino part2
-                ser.write('C') #closes gate
+                if self.ki==0:
+                    ser.write('C') #closes gate
+
+                self.positioner()   # this should be after the door closes, because self.positioner changes self.trial_state
                 print str(self.num_trials+1) +"th trial finished"
                 print ' '
                 print "15s_blank_screen_ends, " +str(self.num_trials+2)+"th trial started"

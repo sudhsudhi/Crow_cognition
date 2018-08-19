@@ -4,7 +4,7 @@ kivy.require('1.10.0') # replace with your current kivy version !
 from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
-from kivy.graphics import Color, Ellipse,Line,Fbo,Rectangle,Triangle
+from kivy.graphics import Color, Ellipse,Line,Fbo,Rectangle
 from kivy.clock import Clock
 from kivy.properties import NumericProperty
 import serial,time
@@ -70,15 +70,16 @@ class Shapy(Widget):
     def positioner(self):   #randomly places the shape anywhere and plays the sound randomly based on sound_list
         # no need to use this in update ,because position is anyhow random. Works fine in full screen too.
         self.area =  40000                  #it is here just to initialize (there is no need of updating, but it's still here)
-        self.radius= (self.area/math.pi)**0.5
+        self.wth= 250
+        self.hht=self.area/self.wth
 
-        self.center_xcordi=random.uniform(self.center_x-self.width/2 + self.radius ,self.center_x+self.width/2-self.radius) #uniform produces a random float
-        self.center_ycordi=random.uniform(self.center_y-self.height/2 + self.radius ,self.center_y+self.height/2 -self.radius)
+        self.center_xcordi=random.uniform(self.center_x-self.width/2 + self.wth ,self.center_x+self.width/2-self.wth) #uniform produces a random float
+        self.center_ycordi=random.uniform(self.center_y-self.height/2 + self.hht ,self.center_y+self.height/2 -self.hht)
 
         with self.canvas:     
             Color(1,0,0)
             
-            Ellipse(pos=(self.center_xcordi - self.radius, self.center_ycordi - self.radius),size=(2*self.radius,2*self.radius))
+            Rectangle(pos=(self.center_xcordi-self.wth/2 , self.center_ycordi-self.hht/2),size=(self.wth, self.hht))
 
         k = random.randint(0,2) #gives 0/1/2
 
@@ -101,11 +102,10 @@ class Shapy(Widget):
         # also has to be changed for each shape
         # returns True if inside shape and false if outside shape
         #tch is the touch object 
-         xc=tch.x
-         yc=tch.y
-         xc1=(float(xc)-self.center_xcordi)**2
-         yc1=(float(yc)-self.center_ycordi)**2
-         if xc1 +yc1 <= (self.radius)**2:
+    
+         x=tch.x-self.center_xcordi
+         y=tch.y-self.center_ycordi
+         if -self.hht/2<y<self.hht/2 and -self.wth/2<x<self.wth/2 :  
             return True
          else :
             return False
@@ -143,7 +143,8 @@ class Shapy(Widget):
                     self.sheet.cell(row= self.peck_no+2,column=5).value = str(tro)
                     self.boo.save(self.file_name +'.xlsx')
                     #--arduino part1  , part 2 in update function
-                    ser.write('O') #opens gate
+                    if self.ki==0:
+                        ser.write('O') #opens gate
                     
                     
                     current1=datetime.datetime.now()
@@ -215,11 +216,14 @@ class Shapy(Widget):
         if self.nextt!='o':
             if datetime.datetime.now().time() > self.nextt.time():
                 
-                self.positioner()
+                
                 
                 self.nextt='o'
                 #--arduino part2
-                ser.write('C') #closes gate
+                if self.ki==0:
+                    ser.write('C') #closes gate
+
+                self.positioner()   # this should be after the door closes, because self.positioner changes self.ki
                 print str(self.num_trials+1) +"th trial finished"
                 print ' '
                 print "15s_blank_screen_ends, " +str(self.num_trials+2)+"th trial started"

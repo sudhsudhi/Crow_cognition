@@ -4,7 +4,7 @@ kivy.require('1.10.0') # replace with your current kivy version !
 from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.uix.button import Button
-from kivy.graphics import Color, Ellipse,Line,Fbo,Rectangle
+from kivy.graphics import Color, Ellipse,Line,Fbo,Rectangle,Triangle
 from kivy.clock import Clock
 from kivy.properties import NumericProperty
 import serial,time
@@ -70,16 +70,16 @@ class Shapy(Widget):
     def positioner(self):   #randomly places the shape anywhere and plays the sound randomly based on sound_list
         # no need to use this in update ,because position is anyhow random. Works fine in full screen too.
         self.area =  40000                  #it is here just to initialize (there is no need of updating, but it's still here)
-        self.wth= 250
-        self.hht=self.area/self.wth
+        
+        self.circum_radius= ((4*(self.area))/(3*(3**0.5)))**0.5
 
-        self.center_xcordi=random.uniform(self.center_x-self.width/2 + self.wth ,self.center_x+self.width/2-self.wth) #uniform produces a random float
-        self.center_ycordi=random.uniform(self.center_y-self.height/2 + self.hht ,self.center_y+self.height/2 -self.hht)
+        self.center_xcordi=random.uniform(self.center_x-self.width/2 + self.circum_radius ,self.center_x+self.width/2-self.circum_radius) #uniform produces a random float
+        self.center_ycordi=random.uniform(self.center_y-self.height/2 + self.circum_radius ,self.center_y+self.height/2 -self.circum_radius)
 
         with self.canvas:     
             Color(1,0,0)
             
-            Rectangle(pos=(self.center_xcordi-self.wth/2 , self.center_ycordi-self.hht/2),size=(self.wth, self.hht))
+            Triangle(points=(self.center_xcordi, self.center_ycordi + self.circum_radius , self.center_xcordi - 0.866025*self.circum_radius , self.center_ycordi -0.5*self.circum_radius  , self.center_xcordi +0.866025*self.circum_radius , self.center_ycordi -0.5*self.circum_radius,))
 
         k = random.randint(0,2) #gives 0/1/2
 
@@ -103,9 +103,20 @@ class Shapy(Widget):
         # returns True if inside shape and false if outside shape
         #tch is the touch object 
     
-         x=tch.x-self.center_xcordi
-         y=tch.y-self.center_ycordi
-         if -self.hht/2<y<self.hht/2 and -self.wth/2<x<self.wth/2 :  
+
+         x=tch.x
+         y=tch.y
+
+         x1,y1,x2,y2,x3,y3 = self.center_xcordi,self.center_ycordi + self.circum_radius , self.center_xcordi - 0.866025*self.circum_radius , self.center_ycordi -0.5*self.circum_radius  , self.center_xcordi +0.866025*self.circum_radius , self.center_ycordi -0.5*self.circum_radius
+         #print x1,y1,x2,y2,x3,y3
+         #print 'x1,y1,x2,y2,x3,y3'
+         a=(x-x1)-((y-y1)*((x2-x1)/(y2-y1)))
+         a1=(x3-x1)-((y3-y1)*((x2-x1)/(y2-y1)))
+         b=(x-x1)-((y-y1)*((x3-x1)/(y3-y1)))
+         b1=(x2-x1)-((y2-y1)*((x3-x1)/(y3-y1)))
+         c=y-y3   #(y3=y2, the third lines equation is y=y3)
+         c1=y1-y3
+         if a*a1>=0 and b*b1>=0 and c*c1>=0:  
             return True
          else :
             return False
@@ -143,7 +154,8 @@ class Shapy(Widget):
                     self.sheet.cell(row= self.peck_no+2,column=5).value = str(tro)
                     self.boo.save(self.file_name +'.xlsx')
                     #--arduino part1  , part 2 in update function
-                    ser.write('O') #opens gate
+                    if self.ki==0:
+                        ser.write('O') #opens gate
                     
                     
                     current1=datetime.datetime.now()
@@ -215,11 +227,13 @@ class Shapy(Widget):
         if self.nextt!='o':
             if datetime.datetime.now().time() > self.nextt.time():
                 
-                self.positioner()
                 
                 self.nextt='o'
                 #--arduino part2
-                ser.write('C') #closes gate
+                if self.ki==0:
+                    ser.write('C') #closes gate
+
+                self.positioner()   # this should be after the door closes, because self.positioner changes self.ki
                 print str(self.num_trials+1) +"th trial finished"
                 print ' '
                 print "15s_blank_screen_ends, " +str(self.num_trials+2)+"th trial started"
