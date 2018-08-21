@@ -14,7 +14,7 @@ from openpyxl import Workbook
 import multiprocessing
 import random
 global ser
-ser=serial.Serial('COM1',9600)
+#ser=serial.Serial('COM1',9600)
 
 # adjust 1. area , 2. time t , 3. port of serial 
 
@@ -93,6 +93,7 @@ class Shapy(Widget):
         print "Trials left:[circle,Ellipse,Rectangle,Triangle] ; [incorrect:correct] >>>>>>>"
         print self.trial_list
 
+        self.canvas.after.clear()  #to remove black screen, whenever it is placed
 
 
         if self.canvas_shape==0:
@@ -290,7 +291,12 @@ class Shapy(Widget):
                     self.boo.save(self.file_name +'.xlsx')
                     #--arduino part1  , part 2 in update function
                     if self.trial_state==1: #correct_trial
+                        print "l"
                         ser.write('O') #opens gate
+                    else: #incorrect_trial
+                      with self.canvas.after:     #to add a screen to the  canvas, canvas.after appears above canvas
+                            Color(0, 0, 0)
+                            Rectangle(pos=self.pos, size=self.size)
                     
                     
                     current1=datetime.datetime.now()
@@ -366,8 +372,7 @@ class Shapy(Widget):
                                 
                 self.nextt='o'
                 #--arduino part2
-                if self.trial_state==1:
-                    ser.write('C') #closes gate
+               
 
                 self.positioner()   # this should be after the door closes, because self.positioner changess self.trial_state
                 print str(self.num_trials+1) +"th trial finished"

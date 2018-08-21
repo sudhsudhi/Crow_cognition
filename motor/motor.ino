@@ -33,12 +33,16 @@ void setup() {
 void loop() {
   // step one revolution  in one direction:
   Serial.println("clockwise");
-  myStepper.step(-2400);
+  myStepper.step(2750);
   delay(1000);
 
   // step one revolution in the other direction:
   Serial.println("counterclockwise");
-  myStepper.step(2400);
+  myStepper.step(-2750);
+  digitalWrite(8,LOW); // so that current doesn't flow into the driver when it is idle; prevents heating up.
+  digitalWrite(9,LOW);
+  digitalWrite(10,LOW);
+  digitalWrite(11,LOW);
   delay(5000);
 }
 

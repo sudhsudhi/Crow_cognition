@@ -76,6 +76,9 @@ class Shapy(Widget):
         self.center_xcordi=random.uniform(self.center_x-self.width/2 + self.circum_radius ,self.center_x+self.width/2-self.circum_radius) #uniform produces a random float
         self.center_ycordi=random.uniform(self.center_y-self.height/2 + self.circum_radius ,self.center_y+self.height/2 -self.circum_radius)
 
+
+
+        self.canvas.after.clear()  #to remove black screen, whenever it is placed
         with self.canvas:     
             Color(1,0,0)
             
@@ -155,7 +158,15 @@ class Shapy(Widget):
                     self.boo.save(self.file_name +'.xlsx')
                     #--arduino part1  , part 2 in update function
                     if self.ki==0:
+                        print 'h'
                         ser.write('O') #opens gate
+
+                    elif self.ki==1 or self.ki==2:
+
+                        with self.canvas.after:     #to add a screen to the  canvas, canvas.after appears above canvas
+                            Color(0, 0, 0)
+                            Rectangle(pos=self.pos, size=self.size)
+                    
                     
                     
                     current1=datetime.datetime.now()
@@ -230,8 +241,7 @@ class Shapy(Widget):
                 
                 self.nextt='o'
                 #--arduino part2
-                if self.ki==0:
-                    ser.write('C') #closes gate
+                
 
                 self.positioner()   # this should be after the door closes, because self.positioner changes self.ki
                 print str(self.num_trials+1) +"th trial finished"
