@@ -14,7 +14,7 @@ from openpyxl import Workbook
 import multiprocessing
 import random
 global ser
-ser=serial.Serial('COM1',9600)
+#ser=serial.Serial('COM1',9600)
 
 # adjust 1. area , 2. time t , 3. port of serial 
 
@@ -146,12 +146,12 @@ class Shapy(Widget):
                     self.boo.save(self.file_name +'.xlsx')
                     #--arduino part1  , part 2 in update function
                     if self.ki==0:
-                    	print 'hi'
-                        ser.write('O') #opens gate
+                        print 'hi'
+                        #ser.write('O') #opens gate
 
                     elif self.ki==1 or self.ki==2:
 
-                    	with self.canvas.after:     #to add a screen to the  canvas, canvas.after appears above canvas
+                        with self.canvas.after:     #to add a screen to the  canvas, canvas.after appears above canvas
                             Color(0, 0, 0)
                             Rectangle(pos=self.pos, size=self.size)
                     
